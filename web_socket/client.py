@@ -611,6 +611,10 @@ class IncortaMCPClient:
                                 "message": f"Successfully processed {len(files)} file(s): {', '.join(file_info)}",
                                 "content_preview": all_file_content[:500] + "..." if len(all_file_content) > 500 else all_file_content
                             })
+                            
+                            # Automatically analyze the uploaded files
+                            analysis_query = f"Please analyze the following {len(files)} uploaded file(s), where user uploaded them to you to see the data or what he want to consider in his chat and provide a summary of their content:\n\n{all_file_content}"
+                            await self.process_query(analysis_query)
                     
                     elif data.get("type") == "clear_conversation":
                         await self.clear_conversation()
