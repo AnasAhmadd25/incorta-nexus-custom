@@ -11,7 +11,7 @@ interface MessageBubbleProps {
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
-  console.log('MessageBubble rendered - type:', message.type, 'role:', message.role, 'content preview:', message.content?.substring(0, 50));
+  // console.log('MessageBubble rendered - type:', message.type, 'content preview:', message.content?.substring(0, 50));
 
   const getMessageConfig = () => {
     switch (message.type) {
@@ -91,11 +91,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
   };
 
   const renderMessageContent = () => {
-    console.log('=== MESSAGE BUBBLE DEBUG ===');
-    console.log('Message role:', message.role);
-    console.log('Message type:', message.type);
-    console.log('Full message:', message);
-    console.log('===============================');
+    // console.log('=== MESSAGE BUBBLE DEBUG ===');
+    // console.log('Message type:', message.type);
+    // console.log('Full message:', message);
+    // console.log('===============================');
     
     switch (message.type) {
       case 'thinking':
@@ -110,14 +109,20 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-blue-600">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="font-medium">Executing tool: {message.toolName}</span>
+              <span className="font-medium">
+                Executing tool: {message.toolName || 'Unknown tool'}
+              </span>
             </div>
-            {message.toolArgs && (
+            {message.toolArgs && Object.keys(message.toolArgs).length > 0 ? (
               <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
                 <div className="text-xs text-blue-700 dark:text-blue-300 mb-1">Parameters:</div>
                 <pre className="text-xs text-blue-800 dark:text-blue-200 whitespace-pre-wrap">
                   {JSON.stringify(message.toolArgs, null, 2)}
                 </pre>
+              </div>
+            ) : (
+              <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+                <div className="text-xs text-blue-700 dark:text-blue-300">No parameters</div>
               </div>
             )}
           </div>
@@ -125,6 +130,14 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
       case 'tool_result':
         return <ToolResultDisplay message={message} />;
       case 'assistant':
+        // Handle empty content gracefully
+        if (!message.content || message.content.trim() === '') {
+          return (
+            <div className="flex items-center gap-2 text-muted-foreground italic">
+              <span>Processing your request...</span>
+            </div>
+          );
+        }
         return (
           <div className="prose prose-sm max-w-none dark:prose-invert prose-pre:bg-muted prose-pre:border prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm">
             <ReactMarkdown 

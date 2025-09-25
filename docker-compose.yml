@@ -1,0 +1,33 @@
+services:
+  backend:
+    image: anasahmad2512/incortanexuscustom:backendProd
+    ports:
+      - "5999:5999"
+    environment:
+      - PYTHONPATH=/app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 5999), timeout=5).close()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - incorta-network
+
+  frontend:
+    image: anasahmad2512/incortanexuscustom:frontendProd
+    ports:
+      - "5901:5901"  # Map host port 5901 to container port 5901 (nginx listening on 5901)
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - incorta-network
+
+networks:
+  incorta-network:
+    driver: bridge
+
+volumes:
+  backend-data:

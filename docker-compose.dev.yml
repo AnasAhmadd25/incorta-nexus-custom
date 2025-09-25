@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "5999:5999"
+    volumes:
+      - .:/app
+      - /app/__pycache__  # Exclude cache
+    environment:
+      - PYTHONPATH=/app
+      - FLASK_ENV=development
+    command: python main_websocket.py
+    networks:
+      - incorta-network
+
+  frontend:
+    build: ./Frontend
+    ports:
+      - "5901:3000"  # Map host port 5901 to container port 3000 (Vite dev server)
+    volumes:
+      - ./Frontend/src:/app/src
+      - ./Frontend/public:/app/public
+      - /app/node_modules  # Exclude node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    command: npm run dev
+    networks:
+      - incorta-network
+
+networks:
+  incorta-network:
+    driver: bridge

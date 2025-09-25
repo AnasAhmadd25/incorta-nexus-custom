@@ -217,8 +217,20 @@ class IncortaMCPClient:
             await self.send_message("error", {"message": "Agent not initialized. Please authenticate first."})
             return "Agent not initialized"
             
-        # Add to conversation history
-        messages = [{"role": "user", "content": query}]
+        # Add user message to conversation history
+        user_message = {"role": "user", "content": query}
+        self.conversation_history.append(user_message)
+        
+        # Add system instruction to avoid unnecessary tool calls
+        system_context = ""
+        if len(self.conversation_history) > 2:
+            system_context = "You are continuing a conversation. Use information from previous responses when possible. Only call tools if you need new or updated information that wasn't provided in the recent conversation history."
+        
+        # Prepare messages with system context if needed
+        messages = []
+        if system_context:
+            messages.append({"role": "system", "content": system_context})
+        messages.extend(self.conversation_history.copy())
 
         await self.send_message("user_message", {
             "content": query,
@@ -235,6 +247,7 @@ class IncortaMCPClient:
             current_tool_id = None
             
             logger.info(f"Starting agent stream with model: {self.current_model}")
+            logger.info(f"Conversation history length: {len(self.conversation_history)}")
             
             # Stream the agent response
             async for chunk in self.agent.astream({"messages": messages}):
@@ -247,9 +260,37 @@ class IncortaMCPClient:
                     logger.info(f"Agent message content: {agent_message.content}")
                     logger.info(f"Agent message dict: {agent_message.__dict__ if hasattr(agent_message, '__dict__') else 'no dict'}")
                     
+                    # Special handling for Gemini models
+                    if self.current_model == "gemini":
+                        logger.info("GEMINI: Checking for tool calls")
+                        if hasattr(agent_message, 'tool_calls'):
+                            logger.info(f"GEMINI: tool_calls found: {len(agent_message.tool_calls)}")
+                    
+                    
                     # Check if this message has tool calls directly
-                    if hasattr(agent_message, 'tool_calls') and agent_message.tool_calls:
+                    has_tool_calls = hasattr(agent_message, 'tool_calls') and agent_message.tool_calls
+                    sent_contextual_message = False
+                    
+                    if has_tool_calls:
                         logger.info(f"Found tool_calls: {agent_message.tool_calls}")
+                        
+                        # For Gemini, if content is empty but we have tool calls, send a contextual message
+                        if (self.current_model == "gemini" and 
+                            (not agent_message.content or agent_message.content == "")):
+                            tool_names = [tool_call.get("name", "unknown") if isinstance(tool_call, dict) 
+                                        else getattr(tool_call, 'name', 'unknown') 
+                                        for tool_call in agent_message.tool_calls]
+                            contextual_message = f"I'll help you with that. Let me use the {', '.join(tool_names)} tool{'s' if len(tool_names) > 1 else ''} to get the information you need."
+                            
+                            await self.send_message("assistant_message", {
+                                "content": contextual_message,
+                                "role": "assistant", 
+                                "type": "text",
+                                "model": self.current_model
+                            })
+                            sent_contextual_message = True
+                            response_content = contextual_message  # Set response content for conversation history
+                        
                         for tool_call in agent_message.tool_calls:
                             # Handle both dictionary and object formats
                             if isinstance(tool_call, dict):
@@ -270,60 +311,71 @@ class IncortaMCPClient:
                                 "tool_id": current_tool_id
                             })
                     
-                    if isinstance(agent_message.content, str):
-                        # Handle string content - send full content each time
-                        content = agent_message.content
-                        response_content = content
-                        
-                        await self.send_message("assistant_message", {
-                            "content": content,
-                            "role": "assistant",
-                            "type": "text",
-                            "model": self.current_model
-                        })
-                        
-                    elif isinstance(agent_message.content, list):
-                        logger.info(f"Processing content list with {len(agent_message.content)} parts")
-                        for i, part in enumerate(agent_message.content):
-                            logger.info(f"Processing content part {i}: {part}")
+                    # Also check for invalid_tool_calls
+                    if hasattr(agent_message, 'invalid_tool_calls') and agent_message.invalid_tool_calls:
+                        logger.warning(f"GEMINI WARNING: Found invalid tool calls: {agent_message.invalid_tool_calls}")
+                        for invalid_call in agent_message.invalid_tool_calls:
+                            logger.warning(f"Invalid tool call details: {invalid_call}")
+                    
+                    # Only process content if we haven't already sent a contextual message for Gemini
+                    if not sent_contextual_message:
+                        if isinstance(agent_message.content, str):
+                            # Handle string content - send full content each time
+                            content = agent_message.content
+                            # Only send if content is not empty and not just whitespace
+                            if content and content.strip():
+                                response_content = content
+                                
+                                logger.info(f"Sending assistant message with content: {content[:100]}...")
+                                
+                                await self.send_message("assistant_message", {
+                                    "content": content,
+                                    "role": "assistant",
+                                    "type": "text",
+                                    "model": self.current_model
+                                })
+                            else:
+                                logger.info(f"Skipping empty string content for {self.current_model}")
                             
-                            if isinstance(part, dict):
-                                if "text" in part and part["text"]:
-                                    # Handle text part - send full content each time
-                                    content = part["text"]
-                                    response_content = content
-                                    
-                                    await self.send_message("assistant_message", {
-                                        "content": content,
-                                        "role": "assistant",
-                                        "type": "text",
-                                        "model": self.current_model
-                                    })
-                                    
-                                elif "name" in part and part["name"]:
-                                    current_tool_name = part["name"]
-                                    current_tool_id = part.get("id", f"tool_{current_tool_name}_{int(asyncio.get_event_loop().time())}")
-                                    logger.info(f"Tool call detected via content part - name: {current_tool_name}, id: {current_tool_id}")
-                                    
-                                    await self.send_message("tool_call", {
-                                        "tool_name": current_tool_name,
-                                        "tool_args": part.get("input", part.get("arguments", {})),
-                                        "tool_id": current_tool_id
-                                    })
-                            elif hasattr(part, '__dict__'):
-                                # Handle object format
-                                logger.info(f"Processing part object: {part.__dict__}")
-                                if hasattr(part, 'name') and part.name:
-                                    current_tool_name = part.name
-                                    current_tool_id = getattr(part, 'id', f"tool_{current_tool_name}_{int(asyncio.get_event_loop().time())}")
-                                    tool_args = getattr(part, 'input', getattr(part, 'arguments', {}))
-                                    logger.info(f"Tool call detected via part object - name: {current_tool_name}, id: {current_tool_id}")
-                                    
-                                    await self.send_message("tool_call", {
-                                        "tool_name": current_tool_name,
-                                        "tool_args": tool_args,
-                                        "tool_id": current_tool_id
-                                    })
+                        elif isinstance(agent_message.content, list):
+                            logger.info(f"Processing content list with {len(agent_message.content)} parts")
+                            text_parts = []
+                            
+                            for i, part in enumerate(agent_message.content):
+                                logger.info(f"Processing content part {i}: {part}")
+                                
+                                if isinstance(part, dict):
+                                    if "text" in part and part["text"] and part["text"].strip():
+                                        # Collect non-empty text parts
+                                        text_parts.append(part["text"].strip())
+                                        
+                                    elif "name" in part and part["name"]:
+                                        # Skip tool_use parts - they're handled by tool_calls attribute
+                                        logger.info(f"Skipping tool_use part in content - handled by tool_calls")
+                                        
+                                elif hasattr(part, '__dict__'):
+                                    # Handle object format
+                                    logger.info(f"Processing part object: {part.__dict__}")
+                                    if hasattr(part, 'text') and part.text and part.text.strip():
+                                        text_parts.append(part.text.strip())
+                            
+                            # Send combined text if any non-empty text parts found
+                            if text_parts:
+                                content = "\n".join(text_parts)
+                                response_content = content
+                                
+                                logger.info(f"Sending combined assistant message: {content[:100]}...")
+                                
+                                await self.send_message("assistant_message", {
+                                    "content": content,
+                                    "role": "assistant",
+                                    "type": "text",
+                                    "model": self.current_model
+                                })
+                            else:
+                                logger.info(f"No non-empty text parts found in content list for {self.current_model}")
+                    else:
+                        logger.info(f"Skipping content processing - already sent contextual message for {self.current_model}")
                 
                 elif "tools" in chunk:
                     logger.info(f"Processing tools chunk: {chunk['tools']}")
@@ -342,6 +394,12 @@ class IncortaMCPClient:
                 "final_response": response_content,
                 "model": self.current_model
             })
+            
+            # Add assistant response to conversation history
+            if response_content:
+                assistant_message = {"role": "assistant", "content": response_content}
+                self.conversation_history.append(assistant_message)
+                logger.info(f"Added assistant response to history. Total messages: {len(self.conversation_history)}")
             
             return response_content
 

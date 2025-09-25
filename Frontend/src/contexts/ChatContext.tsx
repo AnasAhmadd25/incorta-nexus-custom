@@ -161,32 +161,37 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       case 'assistant_message':
         setIsThinking(false);
-        console.log('ChatContext: Adding assistant message:', data.data.content.substring(0, 100));
-        setMessages(prev => {
-          // Check if the last message is an assistant message that we can update
-          const lastMessage = prev[prev.length - 1];
-          if (lastMessage && lastMessage.type === 'assistant' && lastMessage.id.includes('assistant-temp')) {
-            // Update the existing assistant message
-            const updatedMessages = [...prev];
-            updatedMessages[updatedMessages.length - 1] = {
-              ...lastMessage,
-              content: data.data.content,
-              timestamp: Date.now()
-            };
-            console.log('ChatContext: Updated assistant message, total:', updatedMessages.length);
-            return updatedMessages;
-          } else {
-            // Create new assistant message
-            const newMessages = [...prev, {
-              id: `assistant-temp-${Date.now()}`,
-              type: 'assistant' as const,
-              content: data.data.content,
-              timestamp: Date.now()
-            }];
-            console.log('ChatContext: Total messages after assistant:', newMessages.length);
-            return newMessages;
-          }
-        });
+        // Only add assistant message if content is not empty
+        if (data.data.content && data.data.content.trim()) {
+          console.log('ChatContext: Adding assistant message:', data.data.content.substring(0, 100));
+          setMessages(prev => {
+            // Check if the last message is an assistant message that we can update
+            const lastMessage = prev[prev.length - 1];
+            if (lastMessage && lastMessage.type === 'assistant' && lastMessage.id.includes('assistant-temp')) {
+              // Update the existing assistant message
+              const updatedMessages = [...prev];
+              updatedMessages[updatedMessages.length - 1] = {
+                ...lastMessage,
+                content: data.data.content,
+                timestamp: Date.now()
+              };
+              console.log('ChatContext: Updated assistant message, total:', updatedMessages.length);
+              return updatedMessages;
+            } else {
+              // Create new assistant message
+              const newMessages = [...prev, {
+                id: `assistant-temp-${Date.now()}`,
+                type: 'assistant' as const,
+                content: data.data.content,
+                timestamp: Date.now()
+              }];
+              console.log('ChatContext: Total messages after assistant:', newMessages.length);
+              return newMessages;
+            }
+          });
+        } else {
+          console.log('ChatContext: Skipping empty assistant message');
+        }
         break;
 
       case 'thinking':
@@ -195,16 +200,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         break;
 
       case 'tool_call':
-        console.log('ChatContext: Adding tool_call message:', data.data.tool_name);
+        console.log('ChatContext: Received tool_call message:', data);
+        console.log('ChatContext: Tool name:', data.data?.tool_name);
+        console.log('ChatContext: Tool args:', data.data?.tool_args);
+        console.log('ChatContext: Adding tool_call message:', data.data?.tool_name || 'unknown');
         setMessages(prev => {
           const newMessages = [...prev, {
             id: messageId,
             type: 'tool_call' as const,
-            content: `Calling tool: ${data.data.tool_name}`,
+            content: `Calling tool: ${data.data?.tool_name || 'unknown'}`,
             timestamp: Date.now(),
-            toolName: data.data.tool_name,
-            toolArgs: data.data.tool_args,
-            toolId: data.data.tool_id
+            toolName: data.data?.tool_name || 'unknown',
+            toolArgs: data.data?.tool_args || {},
+            toolId: data.data?.tool_id || messageId
           }];
           console.log('ChatContext: Total messages after tool_call:', newMessages.length);
           return newMessages;

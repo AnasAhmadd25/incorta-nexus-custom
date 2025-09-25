@@ -12,11 +12,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && pip install uv
 
-# Copy uv configuration files first (for better caching)
-COPY pyproject.toml uv.lock ./
+# Copy requirements file first (for better caching)
+COPY requirements.txt ./
 
-# Install dependencies using uv (much faster than pip)
-RUN uv sync --frozen --no-dev
+# Install dependencies using uv pip (much faster than pip)
+RUN uv pip install --system -r requirements.txt
 
 # Copy application code
 COPY . .

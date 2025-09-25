@@ -1,7 +1,7 @@
 export const config = {
-  // WebSocket configuration - hardcoded for Docker deployment
+  // WebSocket configuration - using Cloudflare tunnel
   websocket: {
-    url: 'ws://localhost:5999', // Change this to your Cloudflare tunnel WSS URL when ready
+    url: 'wss://compiled-fragrance-willow-awesome.trycloudflare.com', // Cloudflare tunnel to backend
     reconnectDelay: 3000, // milliseconds
     maxReconnectAttempts: 5
   },

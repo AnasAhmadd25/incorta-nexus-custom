@@ -66,7 +66,7 @@ const ToolExecutionTab: React.FC<ToolExecutionTabProps> = ({ toolCall, toolResul
                 <CheckCircle className="h-4 w-4" />
               )}
               <span className="font-medium">
-                {isLoading ? 'Executing' : 'Executed'} tool: {toolCall.toolName}
+                {isLoading ? 'Executing' : 'Executed'} tool: {toolCall?.toolName || 'Unknown Tool'}
               </span>
               {isLoading && (
                 <motion.div
@@ -107,7 +107,7 @@ const ToolExecutionTab: React.FC<ToolExecutionTabProps> = ({ toolCall, toolResul
                   <div>
                     <h4 className="text-sm font-semibold mb-2 text-current">Arguments:</h4>
                     <div className="bg-slate-50 dark:bg-slate-900 border rounded p-3 text-sm font-mono overflow-x-auto">
-                      <pre className="whitespace-pre-wrap text-slate-700 dark:text-slate-300">{formatToolArgs(toolCall.toolArgs)}</pre>
+                      <pre className="whitespace-pre-wrap text-slate-700 dark:text-slate-300">{formatToolArgs(toolCall?.toolArgs)}</pre>
                     </div>
                   </div>
 
@@ -124,8 +124,8 @@ const ToolExecutionTab: React.FC<ToolExecutionTabProps> = ({ toolCall, toolResul
                   {/* Execution Time */}
                   {toolResult && (
                     <div className="text-xs text-current/70 flex justify-between">
-                      <span>Started: {new Date(toolCall.timestamp).toLocaleTimeString()}</span>
-                      <span>Completed: {new Date(toolResult.timestamp).toLocaleTimeString()}</span>
+                      <span>Started: {new Date(toolCall?.timestamp || Date.now()).toLocaleTimeString()}</span>
+                      <span>Completed: {new Date(toolResult?.timestamp || Date.now()).toLocaleTimeString()}</span>
                     </div>
                   )}
                 </div>
@@ -136,7 +136,7 @@ const ToolExecutionTab: React.FC<ToolExecutionTabProps> = ({ toolCall, toolResul
         
         {/* Timestamp */}
         <div className="text-xs mt-2 opacity-60">
-          {new Date(toolCall.timestamp).toLocaleTimeString()}
+          {new Date(toolCall?.timestamp || Date.now()).toLocaleTimeString()}
         </div>
       </div>
     </div>
