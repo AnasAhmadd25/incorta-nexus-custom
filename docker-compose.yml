@@ -1,3 +1,5 @@
+version: '2.4'
+
 services:
   backend:
     image: anasahmad2512/incortanexuscustom:backendProd
@@ -12,22 +14,11 @@ services:
       retries: 3
       start_period: 40s
     restart: unless-stopped
-    networks:
-      - incorta-network
 
   frontend:
     image: anasahmad2512/incortanexuscustom:frontendProd
     ports:
-      - "5901:5901"  # Map host port 5901 to container port 5901 (nginx listening on 5901)
+      - "5901:5901"
     depends_on:
       - backend
     restart: unless-stopped
-    networks:
-      - incorta-network
-
-networks:
-  incorta-network:
-    driver: bridge
-
-volumes:
-  backend-data:
