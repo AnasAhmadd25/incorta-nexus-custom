@@ -1,0 +1,21 @@
+[project]
+name = "claude-client"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.64.0",
+    "langchain-anthropic>=0.3.19",
+    "langchain-community>=0.3.29",
+    "langchain-google-genai>=2.1.10",
+    "langchain-google-vertexai>=2.0.28",
+    "langchain-mcp-adapters>=0.1.9",
+    "langchain-mistralai>=0.2.11",
+    "langchain-openai>=0.3.32",
+    "langgraph>=0.6.7",
+    "mcp>=1.13.0",
+    "rich>=14.1.0",
+    "toolbox-langchain>=0.5.0",
+    "websockets>=15.0.1",
+]

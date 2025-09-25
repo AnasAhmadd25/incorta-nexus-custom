@@ -1,0 +1,194 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Incorta Light Theme */
+    --theme-l-primary-color: #2C2D88;
+    --theme-l-link-color: #4A55FF;
+    --theme-l-link-hover-color: #3936E2;
+    --theme-l-primary-text: #393E41;
+    --theme-l-secondary-text: #4C5558;
+    --theme-l-dark-primary-text: #232B2E;
+    --theme-l-off-white: #EEF1F2;
+    --theme-l-folder-icon-color: #C2E7F5;
+    --theme-l-separator-color: #E8E8E8;
+    --theme-l-disabled-text-color: #CFD5DA;
+    --theme-l-border-color-base: #D3D0CB;
+    --theme-l-item-hover-bg: #EEF1F2;
+    --theme-l-item-active-bg: #EEF1F2;
+    --theme-l-disabled-bg: #F5F5F5;
+    --theme-l-basic-color: #fff;
+    --theme-l-incorta-blue: #3E45A2;
+    --theme-l-btn-color: #2C2D88;
+    --theme-l-btn-hover: #3E45A2;
+    --theme-l-inc-light-gray: #C3CDD1;
+    --theme-l-inc-ash: #4C5558;
+    --theme-l-inc-dark-gray: #798286;
+    --theme-l-inc-hover-blue: #3E45A2;
+    --theme-l-inc-clickable-blue: #535DBC;
+    --theme-l-inc-solitude-gray: #EEF1F2;
+    --theme-l-bg-color: #F5F5F5;
+    --theme-l-body-new-background: #FFFFFF;
+
+    /* ShadCN mappings to Incorta colors */
+    --background: 0 0% 100%;
+    --foreground: 210 8% 23%; /* theme-l-primary-text */
+    --card: 0 0% 100%;
+    --card-foreground: 210 8% 23%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 8% 23%;
+    --primary: 237 55% 35%; /* theme-l-primary-color */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 17% 93%; /* theme-l-off-white */
+    --secondary-foreground: 210 8% 23%;
+    --muted: 210 17% 93%;
+    --muted-foreground: 210 8% 34%; /* theme-l-secondary-text */
+    --accent: 210 17% 93%;
+    --accent-foreground: 210 8% 23%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 8% 82%; /* theme-l-border-color-base */
+    --input: 30 8% 82%;
+    --ring: 237 55% 35%;
+    --radius: 0.5rem;
+
+    /* Sidebar colors */
+    --sidebar-background: 0 0% 96%; /* theme-l-bg-color */
+    --sidebar-foreground: 210 8% 23%;
+    --sidebar-primary: 237 55% 35%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 17% 93%;
+    --sidebar-accent-foreground: 210 8% 23%;
+    --sidebar-border: 30 8% 82%;
+    --sidebar-ring: 237 55% 35%;
+  }
+
+  .dark {
+    /* Incorta Dark Theme */
+    --theme-d-primary-color: #3E45A2;
+    --theme-d-link-color: #8AA7FF;
+    --theme-d-link-hover-color: #738CFF;
+    --theme-d-primary-text: #ECECEC;
+    --theme-d-secondary-text: #C3CDD1;
+    --theme-d-dark-primary-text: #EEF1F2;
+    --theme-d-black: #1F1F1F;
+    --theme-d-basic-color: #131417;
+    --theme-d-incorta-blue: #6975D7;
+    --theme-d-btn-color: #3E45A2;
+    --theme-d-btn-hover: #535DBC;
+    --theme-d-bg-color: #1C1D1E;
+    --theme-d-body-new-background: #1C1D1E;
+
+    /* ShadCN dark mappings */
+    --background: 210 11% 11%; /* theme-d-bg-color */
+    --foreground: 0 0% 93%; /* theme-d-primary-text */
+    --card: 210 11% 11%;
+    --card-foreground: 0 0% 93%;
+    --popover: 210 11% 11%;
+    --popover-foreground: 0 0% 93%;
+    --primary: 237 55% 55%; /* theme-d-primary-color */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 8% 23%;
+    --secondary-foreground: 0 0% 93%;
+    --muted: 210 8% 23%;
+    --muted-foreground: 210 8% 76%; /* theme-d-secondary-text */
+    --accent: 210 8% 23%;
+    --accent-foreground: 0 0% 93%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 93%;
+    --border: 210 8% 23%;
+    --input: 210 8% 23%;
+    --ring: 237 55% 55%;
+
+    /* Sidebar dark colors */
+    --sidebar-background: 210 11% 11%;
+    --sidebar-foreground: 0 0% 93%;
+    --sidebar-primary: 237 55% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 8% 23%;
+    --sidebar-accent-foreground: 0 0% 93%;
+    --sidebar-border: 210 8% 23%;
+    --sidebar-ring: 237 55% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes typing {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-pulse-slow {
+  animation: pulse 2s infinite;
+}
+
+.animate-typing {
+  animation: typing 1.5s infinite;
+}
+
+/* Highlight.js syntax highlighting styles */
+@import 'highlight.js/styles/github-dark.css';
+
+/* Custom highlight.js overrides for better integration */
+.hljs {
+  background: transparent !important;
+  padding: 0 !important;
+  color: #e6edf3 !important;
+}
+
+/* Adjust syntax highlighting colors for dark theme */
+@media (prefers-color-scheme: light) {
+  .hljs {
+    color: #24292f !important;
+  }
+  
+  .hljs-keyword { color: #cf222e !important; }
+  .hljs-string { color: #0a3069 !important; }
+  .hljs-number { color: #0550ae !important; }
+  .hljs-comment { color: #6e7781 !important; }
+}

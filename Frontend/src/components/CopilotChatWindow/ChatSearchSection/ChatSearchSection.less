@@ -1,0 +1,165 @@
+@import '../../../styles/variables.less';
+
+.copilot-chat-footer {
+  &__disclaimer {
+    padding: 8px 16px;
+    text-align: center;
+    
+    .license_disclaimer {
+      font-size: 12px;
+      color: @gray3-color;
+    }
+    
+    .view_more_license {
+      color: @inc-hover-blue;
+      cursor: pointer;
+      margin-left: 4px;
+      text-decoration: underline;
+    }
+  }
+}
+
+.inc-augmented-analytics-search {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  
+  &__context-options {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    
+    &__option {
+      padding: 6px 12px;
+      border: 1px solid @border-color-base;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      
+      &:hover {
+        background-color: @bg-color;
+      }
+      
+      &-disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+  
+  &-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    
+    &__footer_actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      
+      &_left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+    }
+  }
+  
+  &-section {
+    &__input-container {
+      .input {
+        border: 1px solid @border-color-base;
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 14px;
+        line-height: 1.5;
+        min-height: 48px;
+        width: 100%;
+        resize: none;
+        
+        &:focus {
+          outline: none;
+          border-color: @inc-hover-blue;
+          box-shadow: 0 0 0 2px rgba(55, 81, 126, 0.1);
+        }
+        
+        &--mobile {
+          font-size: 16px;
+        }
+      }
+      
+      .input__highlighter {
+        padding: 12px;
+        font-size: 14px;
+        line-height: 1.5;
+        min-height: 48px;
+      }
+    }
+    
+    &__submit-btn {
+      color: @inc-hover-blue;
+      border-color: @inc-hover-blue;
+      
+      &:hover {
+        background-color: @inc-hover-blue;
+        color: white;
+      }
+      
+      &:disabled {
+        opacity: 0.5;
+      }
+    }
+  }
+  
+  &-left-actions {
+    font-size: 12px;
+    height: 24px;
+    border: 1px solid @border-color-base;
+    
+    &:hover {
+      border-color: @inc-hover-blue;
+      color: @inc-hover-blue;
+    }
+    
+    &-disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.loading-suggestions-data {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+
+.mention {
+  background-color: rgba(55, 81, 126, 0.1);
+  color: @inc-hover-blue;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.data-search {
+  background-color: rgba(24, 144, 255, 0.1);
+  color: @primary-color;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+// File upload button styling
+.file-upload-btn {
+  color: @gray3-color;
+  transition: all 0.2s;
+  
+  &:hover {
+    color: @primary-color;
+    background-color: rgba(24, 144, 255, 0.1);
+  }
+  
+  .ant-btn-icon {
+    font-size: 16px;
+  }
+}

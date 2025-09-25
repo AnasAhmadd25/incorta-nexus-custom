@@ -1,0 +1,225 @@
+@import '../../../styles/variables.less';
+
+.inc-augmented-analytics-chat-prompt {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 24px;
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    
+    &.last-of-type {
+      margin-bottom: 32px;
+    }
+  }
+
+  &.chat-mobile {
+    padding: 0 8px;
+  }
+}
+
+.inc-copilot__user-question {
+  align-self: flex-end;
+  background-color: @inc-hover-blue;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 18px 18px 4px 18px;
+  margin: 8px 0;
+  max-width: 80%;
+  word-wrap: break-word;
+  
+  &.rtl {
+    align-self: flex-start;
+    border-radius: 18px 18px 18px 4px;
+  }
+  
+  .attached-files {
+    margin-top: 8px;
+    font-size: 12px;
+    opacity: 0.9;
+  }
+}
+
+.inc-copilot__answer {
+  display: flex;
+  align-items: flex-start;
+  margin: 16px 0;
+  
+  &__icon {
+    display: flex;
+    align-items: center;
+    margin-right: 12px;
+    
+    img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+    }
+    
+    p {
+      margin-left: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: @text-color;
+    }
+  }
+  
+  &__content {
+    flex: 1;
+    background-color: @component-background;
+    border: 1px solid @border-color-base;
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+    
+    &.rtl {
+      direction: rtl;
+    }
+    
+    &__loading {
+      display: flex;
+      align-items: center;
+      
+      .snippet {
+        .stage {
+          .dot-flashing {
+            position: relative;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: @inc-hover-blue;
+            color: @inc-hover-blue;
+            animation: dot-flashing 1s infinite linear alternate;
+            animation-delay: 0.5s;
+            
+            &::before,
+            &::after {
+              content: '';
+              display: inline-block;
+              position: absolute;
+              top: 0;
+            }
+            
+            &::before {
+              left: -15px;
+              width: 10px;
+              height: 10px;
+              border-radius: 5px;
+              background-color: @inc-hover-blue;
+              color: @inc-hover-blue;
+              animation: dot-flashing 1s infinite alternate;
+              animation-delay: 0s;
+            }
+            
+            &::after {
+              left: 15px;
+              width: 10px;
+              height: 10px;
+              border-radius: 5px;
+              background-color: @inc-hover-blue;
+              color: @inc-hover-blue;
+              animation: dot-flashing 1s infinite alternate;
+              animation-delay: 1s;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  &--loading {
+    opacity: 0.8;
+  }
+}
+
+@keyframes dot-flashing {
+  0% {
+    background-color: @inc-hover-blue;
+  }
+  50%,
+  100% {
+    background-color: rgba(55, 81, 126, 0.2);
+  }
+}
+
+.assistant-message {
+  .message-content {
+    line-height: 1.6;
+    color: @text-color;
+  }
+}
+
+.tool-call-message {
+  .tool-call-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: @inc-hover-blue;
+  }
+  
+  .tool-args {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding: 8px;
+    font-family: monospace;
+    font-size: 12px;
+    
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+    }
+  }
+}
+
+.tool-result-message {
+  .tool-result-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #52c41a;
+  }
+  
+  .tool-result-content {
+    background-color: #f6ffed;
+    border: 1px solid #b7eb8f;
+    border-radius: 4px;
+    padding: 8px;
+    font-family: monospace;
+    font-size: 12px;
+    
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+    }
+  }
+}
+
+.error-message {
+  .error-content {
+    color: #ff4d4f;
+    background-color: #fff2f0;
+    border: 1px solid #ffccc7;
+    border-radius: 4px;
+    padding: 12px;
+  }
+}
+
+.files-uploaded-message {
+  .files-uploaded-content {
+    color: #52c41a;
+    background-color: #f6ffed;
+    border: 1px solid #b7eb8f;
+    border-radius: 4px;
+    padding: 12px;
+  }
+}
+
+.default-message {
+  line-height: 1.6;
+  color: @text-color;
+}

@@ -1,0 +1,17 @@
+# Backend .dockerignore
+Frontend/
+node_modules/
+*.pyc
+__pycache__/
+.pytest_cache/
+.coverage
+.git/
+.gitignore
+README.md
+DOCKER-README.md
+.env.example
+*.md
+.DS_Store
+.vscode/
+.idea/
+*.log

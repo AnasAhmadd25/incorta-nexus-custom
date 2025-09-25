@@ -1,0 +1,18 @@
+mcp 
+anthropic
+rich
+websockets
+langgraph
+langchain_openai
+langchain_anthropic
+langchain_community
+langchain_google_genai
+langchain_mistralai
+langchain_mcp_adapters
+# File processing dependencies
+filetype
+PyPDF2
+python-docx
+pandas
+openpyxl
+python-dotenv

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incorta MCP WebSocket Client Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        input, textarea, select, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.authenticated {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f9f9f9;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        .message.user {
+            background-color: #e3f2fd;
+        }
+        .message.assistant {
+            background-color: #f3e5f5;
+        }
+        .message.system {
+            background-color: #fff3e0;
+        }
+        .message.error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .message.tool {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        .llm-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .llm-option {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .llm-option:hover {
+            background-color: #f0f0f0;
+        }
+        .llm-option.selected {
+            border-color: #007bff;
+            background-color: #e3f2fd;
+        }
+        .credentials-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .credentials-grid input {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Incorta MCP WebSocket Client Test</h1>
+        
+        <!-- Connection Status -->
+        <div class="section">
+            <h3>🔌 Connection Status</h3>
+            <div id="status" class="status disconnected">Disconnected</div>
+            <input type="text" id="wsUrl" placeholder="WebSocket URL" value="ws://localhost:5999">
+            <button id="connectBtn" onclick="connect()">Connect to WebSocket Server</button>
+        </div>
+
+        <!-- Model Selection -->
+        <div class="section">
+            <h3>🧠 AI Model Selection</h3>
+            <div class="llm-selector">
+                <div class="llm-option selected" data-provider="claude" onclick="selectModel('claude')">
+                    <strong>Claude</strong><br>
+                    <small>Anthropic Claude 3.5 Sonnet</small>
+                </div>
+                <div class="llm-option" data-provider="gemini" onclick="selectModel('gemini')">
+                    <strong>Gemini</strong><br>
+                    <small>Google Gemini 2.5 Flash Lite</small>
+                </div>
+            </div>
+            <button id="switchModelBtn" onclick="switchModel()" disabled>Switch Model</button>
+            <div id="currentModel" style="margin-top: 10px; padding: 10px; background-color: #e3f2fd; border-radius: 5px;">
+                <strong>Current Model:</strong> <span id="modelDisplay">Claude</span>
+            </div>
+        </div>
+
+        <!-- Incorta Authentication -->
+        <div class="section">
+            <h3>🔐 Incorta Authentication</h3>
+            <div class="credentials-grid">
+                <input type="text" id="envUrl" placeholder="Environment URL" 
+                       value="https://testcluster-1.cloudstaging.incortalabs.com/incorta/api/v2">
+                <input type="text" id="tenant" placeholder="Tenant" value="default">
+                <input type="password" id="accessToken" placeholder="Access Token" 
+                       value="+ui37sqitt4v4xUlr1pl9Sp8QZC0RM2e0dTeflgLQhIdfbeOwL7iibWoO9sAGF4IQnDDdiIRfYns1XmmPA8ga2AhSE513zl/W22L7HycUht3IIKP+mBm2xXgI96Mp0g9IIzXM4SQeY7MiHfUf83iOw==">
+                <input type="text" id="sqlxHost" placeholder="SQLX Host" 
+                       value="jdbc:hive2://testcluster-1-sqlx.spark-cloudstaging.incortacloud-dev.com:443/;transportMode=http;httpPath=gc-us-central1-a-1/cliservice;ssl=true">
+                <input type="text" id="incortaUsername" placeholder="Incorta Username" value="admin">
+            </div>
+            <button id="initBtn" onclick="initializeClient()" disabled>Authenticate with Incorta</button>
+        </div>
+
+        <!-- Chat Interface -->
+        <div class="section">
+            <h3>💬 Chat Interface</h3>
+            <textarea id="messageInput" placeholder="Enter your message here..." rows="3">What schemas are available in the system?</textarea>
+            <button onclick="sendMessage()" disabled id="sendBtn">Send Message</button>
+            <div style="margin-top: 10px;">
+                <button onclick="clearConversation()" disabled id="clearBtn">Clear Conversation</button>
+            </div>
+        </div>
+
+        <!-- Sample Queries -->
+        <div class="section">
+            <h3>📝 Sample Queries</h3>
+            <select id="sampleQueries" onchange="loadSampleQuery()">
+                <option value="">Select a sample query...</option>
+                <option value="schemas">List all available schemas</option>
+                <option value="tables">Show tables in a specific schema</option>
+                <option value="dashboards">List all dashboards</option>
+                <option value="users">Show user information</option>
+                <option value="data_analysis">Analyze data from a specific table</option>
+                <option value="business_views">List business views</option>
+                <option value="sqlx_query">Execute a custom SQL query</option>
+            </select>
+        </div>
+
+        <!-- Messages -->
+        <div class="section">
+            <h3>📨 Messages</h3>
+            <div id="messages" class="messages"></div>
+            <button onclick="clearMessages()">Clear Message Log</button>
+            <button onclick="exportMessages()" disabled id="exportBtn">Export Conversation</button>
+        </div>
+
+        <!-- Connection Info -->
+        <div class="section">
+            <h3>ℹ️ Connection Info</h3>
+            <div id="connectionInfo" style="font-family: monospace; font-size: 12px; background: #f0f0f0; padding: 10px; border-radius: 5px;">
+                <strong>Status:</strong> Not connected<br>
+                <strong>Current LLM:</strong> anthropic<br>
+                <strong>Tools Available:</strong> 0<br>
+                <strong>Messages Sent:</strong> 0
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let isConnected = false;
+        let isInitialized = false;
+        let messageCount = 0;
+        let currentModel = 'claude';
+        let selectedModel = 'claude';
+
+        const sampleQueries = {
+            schemas: "What schemas are available in the Incorta system? Please list them with details.",
+            tables: "Can you show me all the tables in the 'Sales' schema?",
+            dashboards: "List all available dashboards in the system with their descriptions.",
+            users: "Show me information about users and their roles in the system.",
+            data_analysis: "Can you analyze the sales data and show me the top 10 customers by revenue?",
+            business_views: "List all business views available in the system.",
+            sqlx_query: "Execute this SQL query: SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES"
+        };
+
+        function updateStatus(status, className) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = status;
+            statusElement.className = `status ${className}`;
+            updateConnectionInfo();
+        }
+
+        function updateButtons() {
+            document.getElementById('connectBtn').disabled = isConnected;
+            document.getElementById('initBtn').disabled = !isConnected || isInitialized;
+            document.getElementById('sendBtn').disabled = !isInitialized;
+            document.getElementById('clearBtn').disabled = !isInitialized;
+            document.getElementById('switchModelBtn').disabled = !isInitialized;
+            document.getElementById('exportBtn').disabled = messageCount === 0;
+        }
+
+        function updateConnectionInfo() {
+            const info = document.getElementById('connectionInfo');
+            const status = isConnected ? (isInitialized ? 'Connected & Authenticated' : 'Connected') : 'Not connected';
+            const modelName = currentModel === 'claude' ? 'Anthropic Claude 3.5 Sonnet' : 'Google Gemini 2.5 Flash Lite';
+            info.innerHTML = `
+                <strong>Status:</strong> ${status}<br>
+                <strong>Current Model:</strong> ${modelName}<br>
+                <strong>Messages Sent:</strong> ${messageCount}
+            `;
+        }
+
+        function addMessage(content, type = 'system') {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            // Format content with timestamp
+            const timestamp = new Date().toLocaleTimeString();
+            let icon = '';
+            switch(type) {
+                case 'user': icon = '👤'; break;
+                case 'assistant': icon = '🤖'; break;
+                case 'tool': icon = '🔧'; break;
+                case 'error': icon = '❌'; break;
+                default: icon = 'ℹ️'; break;
+            }
+            
+            messageDiv.innerHTML = `<strong>[${timestamp}] ${icon}</strong> ${content}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            if (type === 'user') messageCount++;
+            updateButtons();
+        }
+
+        function selectModel(model) {
+            // Update visual selection
+            document.querySelectorAll('.llm-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            document.querySelector(`[data-provider="${model}"]`).classList.add('selected');
+            
+            selectedModel = model;
+        }
+
+        function switchModel() {
+            if (!isInitialized) {
+                addMessage('Please authenticate first before switching models', 'error');
+                return;
+            }
+
+            if (selectedModel === currentModel) {
+                addMessage(`Already using ${selectedModel} model`, 'system');
+                return;
+            }
+
+            const message = {
+                type: 'set_model',
+                model: selectedModel
+            };
+
+            ws.send(JSON.stringify(message));
+            addMessage(`🔄 Switching to ${selectedModel} model...`, 'user');
+        }
+
+        function loadSampleQuery() {
+            const select = document.getElementById('sampleQueries');
+            const messageInput = document.getElementById('messageInput');
+            if (select.value) {
+                messageInput.value = sampleQueries[select.value];
+            }
+        }
+
+        function connect() {
+            const wsUrl = document.getElementById('wsUrl').value;
+            addMessage(`Connecting to: ${wsUrl}`, 'system');
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function() {
+                isConnected = true;
+                updateStatus('Connected - Ready for initialization', 'connected');
+                updateButtons();
+                addMessage('✅ Connected to WebSocket server', 'system');
+            };
+
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleMessage(data);
+                } catch (error) {
+                    addMessage(`Error parsing message: ${error}`, 'error');
+                }
+            };
+
+            ws.onclose = function() {
+                isConnected = false;
+                isInitialized = false;
+                updateStatus('Disconnected', 'disconnected');
+                updateButtons();
+                addMessage('❌ Disconnected from WebSocket server', 'error');
+            };
+
+            ws.onerror = function(error) {
+                addMessage(`WebSocket error: ${error}`, 'error');
+            };
+        }
+
+        function handleMessage(data) {
+            console.log('Received:', data);
+            
+            switch(data.type) {
+                case 'connected':
+                    addMessage('Server ready for authentication', 'system');
+                    break;
+                
+                case 'authenticated':
+                    isInitialized = true;
+                    updateStatus('Authenticated & Ready', 'authenticated');
+                    updateButtons();
+                    addMessage(`✅ Successfully authenticated!`, 'system');
+                    // Update current model from server response
+                    if (data.data && data.data.model) {
+                        currentModel = data.data.model;
+                        document.getElementById('modelDisplay').textContent = 
+                            currentModel === 'claude' ? 'Claude' : 'Gemini';
+                        updateConnectionInfo();
+                    }
+                    break;
+                
+                case 'model_switched':
+                    currentModel = data.data.model;
+                    const modelDisplayName = currentModel === 'claude' ? 'Claude' : 'Gemini';
+                    document.getElementById('modelDisplay').textContent = modelDisplayName;
+                    addMessage(`✅ Successfully switched to ${modelDisplayName}`, 'system');
+                    updateConnectionInfo();
+                    break;
+                
+                case 'model_switch_failed':
+                    addMessage(`❌ Failed to switch model: ${data.data.message || 'Unknown error'}`, 'error');
+                    break;
+                
+                case 'authentication_failed':
+                    addMessage(`❌ Authentication failed: ${data.data.message}`, 'error');
+                    break;
+                
+                case 'user_message':
+                    addMessage(data.data.content, 'user');
+                    break;
+                
+                case 'assistant_message':
+                    addMessage(data.data.content, 'assistant');
+                    break;
+                
+                case 'tool_call':
+                    addMessage(`🔧 Calling tool: <strong>${data.data.tool_name}</strong>`, 'tool');
+                    if (data.data.tool_args) {
+                        addMessage(`Tool args: ${JSON.stringify(data.data.tool_args, null, 2)}`, 'tool');
+                    }
+                    break;
+                
+                case 'tool_result':
+                    let resultContent = data.data.result;
+                    if (Array.isArray(resultContent)) {
+                        resultContent = resultContent.join('\n');
+                    }
+                    addMessage(`📊 Tool result for <strong>${data.data.tool_name}</strong>:<br><pre>${resultContent}</pre>`, 'tool');
+                    break;
+                
+                case 'conversation_cleared':
+                    addMessage('🧹 Conversation history cleared', 'system');
+                    break;
+                
+                case 'thinking':
+                    addMessage(`🤔 ${data.data.message}`, 'system');
+                    break;
+                
+                case 'completed':
+                    addMessage('✅ Processing completed', 'system');
+                    break;
+                
+                case 'error':
+                    addMessage(`❌ Error: ${data.data.message}`, 'error');
+                    break;
+                
+                default:
+                    addMessage(`Unknown message type: ${data.type}`, 'system');
+                    console.log('Full message:', data);
+            }
+        }
+
+        function initializeClient() {
+            const credentials = {
+                envUrl: document.getElementById('envUrl').value,
+                tenant: document.getElementById('tenant').value,
+                accessToken: document.getElementById('accessToken').value,
+                sqlxHost: document.getElementById('sqlxHost').value,
+                incortaUsername: document.getElementById('incortaUsername').value
+            };
+
+            const message = {
+                type: 'authenticate',
+                credentials: credentials
+            };
+
+            ws.send(JSON.stringify(message));
+            addMessage('🔐 Authenticating with Incorta...', 'user');
+        }
+
+        function sendMessage() {
+            const messageText = document.getElementById('messageInput').value.trim();
+            if (!messageText) {
+                addMessage('Please enter a message', 'error');
+                return;
+            }
+
+            const message = {
+                type: 'query',
+                query: messageText
+            };
+
+            ws.send(JSON.stringify(message));
+            addMessage(messageText, 'user');
+            document.getElementById('messageInput').value = '';
+        }
+
+        function clearConversation() {
+            const message = { type: 'clear_conversation' };
+            ws.send(JSON.stringify(message));
+            addMessage('🧹 Clearing conversation...', 'user');
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+            messageCount = 0;
+            updateButtons();
+        }
+
+        function exportMessages() {
+            const messages = document.getElementById('messages').innerText;
+            const blob = new Blob([messages], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `incorta-mcp-conversation-${new Date().toISOString().slice(0, 19)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize
+        updateButtons();
+        updateConnectionInfo();
+    </script>
+</body>
+</html>
