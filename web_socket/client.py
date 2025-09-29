@@ -39,6 +39,7 @@ class IncortaMCPClient:
         self.websocket = None
         self.current_credentials = None
         self.conversation_history = []
+        self.tool_usage_cache = {}  # Track which tools were used recently
 
     def create_llm(self, provider: str, **kwargs) -> BaseChatModel:
         """Factory function to create different LLM instances"""
@@ -169,12 +170,6 @@ class IncortaMCPClient:
             except Exception as e:
                 logger.error(f"Failed to send WebSocket message: {e}")
 
-    async def clear_conversation(self):
-        """Clear the conversation history"""
-        self.conversation_history = []
-        logger.info("Conversation history cleared")
-        await self.send_message("conversation_cleared", {"status": "success"})
-
     def _make_serializable(self, obj):
         """Convert objects to JSON serializable format"""
         if hasattr(obj, 'text'):
@@ -224,13 +219,60 @@ class IncortaMCPClient:
         # Add system instruction to avoid unnecessary tool calls
         system_context = ""
         if len(self.conversation_history) > 2:
-            system_context = "You are continuing a conversation. Use information from previous responses when possible. Only call tools if you need new or updated information that wasn't provided in the recent conversation history."
+            # Check for recently used tools
+            recent_tools = []
+            current_time = asyncio.get_event_loop().time()
+            for tool_name, usage_info in self.tool_usage_cache.items():
+                # Consider tools used in the last 5 minutes as recent
+                if current_time - usage_info["timestamp"] < 300:  
+                    recent_tools.append(tool_name)
+            
+            if self.current_model == "gemini":
+                # Gemini-specific context to emphasize conversation awareness
+                system_context = """You are continuing a conversation with a user. IMPORTANT: Review the conversation history carefully before responding. 
+                
+Use information from previous messages when possible. Only call tools if you need NEW or UPDATED information that wasn't already provided in this conversation.
+                
+If the user asks about something that was already discussed or shown in previous messages, refer to that information instead of making new tool calls.
+                
+Pay special attention to:
+- Schema information that was already retrieved
+- Data that was already queried or displayed
+- Questions that were already answered
+- Context from previous user messages and your responses"""
+                
+                if recent_tools:
+                    system_context += f"\n\nRecently used tools in this conversation: {', '.join(recent_tools)}. Check if their results are already available in the conversation history before calling them again."
+                    
+            else:
+                # Claude-specific context (more specific about tool usage)
+                system_context = """You are continuing a conversation. Use information from previous responses when possible. 
+
+IMPORTANT: Only call tools if you need NEW or UPDATED information that wasn't already provided in this conversation.
+
+Before calling any tool, check if:
+- Schema information was already retrieved (look for messages about "schemas retrieved" or "schema information")
+- Table data was already queried
+- The same or similar information was already obtained
+
+If you see that schemas, tables, or other data were already retrieved in this conversation, refer to that previous information instead of calling the same tools again.
+
+Only use tools when you need genuinely new information that wasn't provided in the recent conversation history."""
+                
+                if recent_tools:
+                    system_context += f"\n\nRecently used tools in this conversation: {', '.join(recent_tools)}. Their results should be available in the conversation history - avoid calling them again unless you need updated information."
         
         # Prepare messages with system context if needed
         messages = []
         if system_context:
             messages.append({"role": "system", "content": system_context})
         messages.extend(self.conversation_history.copy())
+
+        # Debug: Log what we're sending to the model
+        logger.info(f"Sending {len(messages)} messages to {self.current_model}")
+        for i, msg in enumerate(messages):
+            content_preview = msg["content"][:100] + "..." if len(msg["content"]) > 100 else msg["content"]
+            logger.info(f"Message {i}: {msg['role']} - {content_preview}")
 
         await self.send_message("user_message", {
             "content": query,
@@ -289,7 +331,8 @@ class IncortaMCPClient:
                                 "model": self.current_model
                             })
                             sent_contextual_message = True
-                            response_content = contextual_message  # Set response content for conversation history
+                            # dont set response_content here - wait for actual content
+                            # response_content = contextual_message
                         
                         for tool_call in agent_message.tool_calls:
                             # Handle both dictionary and object formats
@@ -317,65 +360,69 @@ class IncortaMCPClient:
                         for invalid_call in agent_message.invalid_tool_calls:
                             logger.warning(f"Invalid tool call details: {invalid_call}")
                     
-                    # Only process content if we haven't already sent a contextual message for Gemini
-                    if not sent_contextual_message:
-                        if isinstance(agent_message.content, str):
-                            # Handle string content - send full content each time
-                            content = agent_message.content
-                            # Only send if content is not empty and not just whitespace
-                            if content and content.strip():
-                                response_content = content
-                                
-                                logger.info(f"Sending assistant message with content: {content[:100]}...")
-                                
+                    # process content regardless of whether we sent a contextual message
+                    # We need to capture the actual response content for conversation history
+                    if isinstance(agent_message.content, str):
+                        # send full content each time
+                        content = agent_message.content
+                        # Only send if content is not empty and not just whitespace
+                        if content and content.strip():
+                            response_content = content
+                            
+                            logger.info(f"Sending assistant message with content: {content[:100]}...")
+                            
+                            # only send to UI if we haven't already sent a contextual message
+                            if not sent_contextual_message:
                                 await self.send_message("assistant_message", {
                                     "content": content,
                                     "role": "assistant",
                                     "type": "text",
                                     "model": self.current_model
                                 })
-                            else:
-                                logger.info(f"Skipping empty string content for {self.current_model}")
+                        else:
+                            logger.info(f"Skipping empty string content for {self.current_model}")
+                        
+                    elif isinstance(agent_message.content, list):
+                        logger.info(f"Processing content list with {len(agent_message.content)} parts")
+                        text_parts = []
+                        
+                        for i, part in enumerate(agent_message.content):
+                            logger.info(f"Processing content part {i}: {part}")
                             
-                        elif isinstance(agent_message.content, list):
-                            logger.info(f"Processing content list with {len(agent_message.content)} parts")
-                            text_parts = []
+                            if isinstance(part, dict):
+                                if "text" in part and part["text"] and part["text"].strip():
+                                    #  non-empty text
+                                    text_parts.append(part["text"].strip())
+                                    
+                                elif "name" in part and part["name"]:
+                                    # Skip tool_use parts - they're handled by tool_calls attribute
+                                    logger.info(f"Skipping tool_use part in content - handled by tool_calls")
+                                    
+                            elif hasattr(part, '__dict__'):
+                                # Handle object format
+                                logger.info(f"Processing part object: {part.__dict__}")
+                                if hasattr(part, 'text') and part.text and part.text.strip():
+                                    text_parts.append(part.text.strip())
+                        
+                        # Send combined text if any non-empty text parts found
+                        if text_parts:
+                            content = "\n".join(text_parts)
+                            response_content = content
                             
-                            for i, part in enumerate(agent_message.content):
-                                logger.info(f"Processing content part {i}: {part}")
-                                
-                                if isinstance(part, dict):
-                                    if "text" in part and part["text"] and part["text"].strip():
-                                        # Collect non-empty text parts
-                                        text_parts.append(part["text"].strip())
-                                        
-                                    elif "name" in part and part["name"]:
-                                        # Skip tool_use parts - they're handled by tool_calls attribute
-                                        logger.info(f"Skipping tool_use part in content - handled by tool_calls")
-                                        
-                                elif hasattr(part, '__dict__'):
-                                    # Handle object format
-                                    logger.info(f"Processing part object: {part.__dict__}")
-                                    if hasattr(part, 'text') and part.text and part.text.strip():
-                                        text_parts.append(part.text.strip())
+                            logger.info(f"Sending combined assistant message: {content[:100]}...")
                             
-                            # Send combined text if any non-empty text parts found
-                            if text_parts:
-                                content = "\n".join(text_parts)
-                                response_content = content
-                                
-                                logger.info(f"Sending combined assistant message: {content[:100]}...")
-                                
+                            # only send to UI if we haven't already sent a contextual message
+                            if not sent_contextual_message:
                                 await self.send_message("assistant_message", {
                                     "content": content,
                                     "role": "assistant",
                                     "type": "text",
                                     "model": self.current_model
                                 })
-                            else:
-                                logger.info(f"No non-empty text parts found in content list for {self.current_model}")
+                        else:
+                            logger.info(f"No non-empty text parts found in content list for {self.current_model}")
                     else:
-                        logger.info(f"Skipping content processing - already sent contextual message for {self.current_model}")
+                        logger.info(f"Content processing completed - contextual message was sent for {self.current_model}")
                 
                 elif "tools" in chunk:
                     logger.info(f"Processing tools chunk: {chunk['tools']}")
@@ -383,6 +430,48 @@ class IncortaMCPClient:
                     tool_result = tool_message.content
                     
                     logger.info(f"Tool result received - tool_name: {current_tool_name}, tool_id: {current_tool_id}")
+                    
+                    # Add tool result to conversation history for context
+                    if current_tool_name and tool_result:
+                        # Track tool usage for context
+                        self.tool_usage_cache[current_tool_name] = {
+                            "timestamp": asyncio.get_event_loop().time(),
+                            "result_size": len(str(tool_result)) if tool_result else 0
+                        }
+                        
+                        # create a structured tool result message for conversation history
+                        tool_result_summary = f"Tool '{current_tool_name}' executed successfully."
+                        
+                        # add a concise summary for common tools to avoid huge conversation history
+                        if "schema" in current_tool_name.lower():
+                            if isinstance(tool_result, list) and len(tool_result) > 0:
+                                tool_result_summary += f" Retrieved {len(tool_result)} schemas."
+                                # add specific schema names for better context
+                                if len(tool_result) <= 10:  # only if not too many
+                                    try:
+                                        schema_names = [item.get('schemaName', 'Unknown') for item in tool_result if isinstance(item, dict)]
+                                        if schema_names:
+                                            tool_result_summary += f" Schemas: {', '.join(schema_names[:5])}"
+                                            if len(schema_names) > 5:
+                                                tool_result_summary += f" and {len(schema_names) - 5} more."
+                                    except:
+                                        pass
+                            elif isinstance(tool_result, str) and "schema" in tool_result.lower():
+                                tool_result_summary += " Schema information retrieved."
+                            else:
+                                tool_result_summary += " Schema data available."
+                        elif "table" in current_tool_name.lower():
+                            tool_result_summary += " Table information retrieved."
+                        elif "query" in current_tool_name.lower():
+                            tool_result_summary += " Query executed successfully."
+                        else:
+                            # for other tools, add a brief description
+                            tool_result_summary += f" Data retrieved."
+                        
+                        # add to conversation history (assistant message with tool context)
+                        tool_context_message = {"role": "assistant", "content": tool_result_summary}
+                        self.conversation_history.append(tool_context_message)
+                        logger.info(f"Added tool result to conversation history: {tool_result_summary}")
                     
                     await self.send_message("tool_result", {
                         "tool_name": current_tool_name or "unknown",
@@ -400,6 +489,9 @@ class IncortaMCPClient:
                 assistant_message = {"role": "assistant", "content": response_content}
                 self.conversation_history.append(assistant_message)
                 logger.info(f"Added assistant response to history. Total messages: {len(self.conversation_history)}")
+                logger.info(f"Assistant response content preview: {response_content[:200]}...")
+            else:
+                logger.warning(f"No response content to add to conversation history for {self.current_model}")
             
             return response_content
 
@@ -414,7 +506,8 @@ class IncortaMCPClient:
     async def clear_conversation(self):
         """Clear the conversation history"""
         self.conversation_history = []
-        logger.info("Conversation history cleared")
+        self.tool_usage_cache = {}  # Also clear tool usage cache
+        logger.info("Conversation history and tool cache cleared")
         await self.send_message("conversation_cleared", {"status": "success"})
 
     def process_uploaded_file(self, file_data: dict) -> str:
@@ -633,6 +726,7 @@ class IncortaMCPClient:
         """Authenticate user with provided credentials"""
         try:
             self.conversation_history = []
+            self.tool_usage_cache = {}  # Clear tool cache on new authentication
             self.current_credentials = credentials
             
             # Initialize agent with default model (claude)

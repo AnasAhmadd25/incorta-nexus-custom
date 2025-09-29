@@ -1,7 +1,8 @@
 export const config = {
   // WebSocket configuration - using Cloudflare tunnel
   websocket: {
-    url: 'wss://compiled-fragrance-willow-awesome.trycloudflare.com', // Cloudflare tunnel to backend
+    url: 'ws://localhost:5999',
+
     reconnectDelay: 3000, // milliseconds
     maxReconnectAttempts: 5
   },

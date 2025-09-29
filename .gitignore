@@ -140,3 +140,4 @@ DOCKER-README.md
 
 start_both.ps1
 start_both.sh
+Frontend/src/config/index.ts
