@@ -4,7 +4,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile.backend
+      dockerfile: Dockerfile
     image: anasahmad2512/incortanexuscustom:backendProd
     ports:
       - "5999:5999"
@@ -20,8 +20,8 @@ services:
 
   frontend:
     build:
-      context: .
-      dockerfile: Dockerfile.frontend
+      context: ./Frontend
+      dockerfile: Dockerfile
     image: anasahmad2512/incortanexuscustom:frontendProd
     ports:
       - "5901:5901"
