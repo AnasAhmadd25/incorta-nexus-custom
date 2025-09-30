@@ -1,7 +1,7 @@
 export const config = {
   // WebSocket configuration - using Cloudflare tunnel
   websocket: {
-    url: 'ws://localhost:5999',
+    url: 'wss://compiled-fragrance-willow-awesome.trycloudflare.com',
 
     reconnectDelay: 3000, // milliseconds
     maxReconnectAttempts: 5
