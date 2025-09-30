@@ -2,6 +2,9 @@ version: '2.4'
 
 services:
   backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
     image: anasahmad2512/incortanexuscustom:backendProd
     ports:
       - "5999:5999"
@@ -16,6 +19,9 @@ services:
     restart: unless-stopped
 
   frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
     image: anasahmad2512/incortanexuscustom:frontendProd
     ports:
       - "5901:5901"
